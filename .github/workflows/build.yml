@@ -1,0 +1,66 @@
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'binary/**'
+      - 'css/**'
+      - 'dtd/**'
+      - 'img/**'
+      - 'sources/**'
+      - 'text/**'
+      - 'tools/**'
+      - 'xml/**'
+      - 'xsls/**'
+      - 'xslt/**'
+      - 'yaml/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  
+jobs:
+  build:
+    name: build site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: prepare env
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install libxslt1-dev xsltproc libxml2-utils netpbm
+          
+      - name: checkout
+        uses: actions/checkout@v4
+        if: github.ref == 'refs/heads/main'
+
+      - name: build all
+      # first build to prepere structure
+        run: |
+          make all
+          
+      - name: build images
+        run: |
+          make gzip
+          make images
+
+      - name: build api
+        run: |
+          make genapi
+
+      - name: build all
+        # build api
+        run: |
+          make all
+
+      - name: deploy
+        run: |
+          git status
+          mkdir -p /home/runner/work/www
+          make copy NGINX_ORG=/home/runner/work/www
+          ls -ltr /home/runner/work/www
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: /home/runner/work/www 
